@@ -16,7 +16,7 @@ const ALL_PETS = gql`
   }
 `;
 const NEW_PET = gql`
-  mutation createAPet ($newPet: NewPetInput!){
+  mutation createAPet($newPet: NewPetInput!) {
     addPet(input: $newPet) {
       id
       name
@@ -26,18 +26,24 @@ const NEW_PET = gql`
   }
 `;
 
-
-
 export default function Pets() {
   const [modal, setModal] = useState(false);
   const { data, loading, error } = useQuery(ALL_PETS);
-  const [createAPet, newPet] = useMutation(NEW_PET);
+  const [createAPet, newPet] = useMutation(NEW_PET, {
+    update(cache, { data: { addPet } }) {
+      const data = cache.readQuery({ query: ALL_PETS });
+      cache.writeQuery({
+        query: ALL_PETS,
+        data: { pets: [addPet, ...data.pets] }
+      });
+    },
+  });
 
   const onSubmit = (input) => {
     setModal(false);
     createAPet({
-      variables: {newPet: input}
-    })
+      variables: { newPet: input },
+    });
   };
 
   if (loading || newPet.loading) {
@@ -47,7 +53,6 @@ export default function Pets() {
   if (error || newPet.error) {
     return <p>Error!</p>;
   }
-
 
   if (modal) {
     return <NewPetModal onSubmit={onSubmit} onCancel={() => setModal(false)} />;
